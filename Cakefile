@@ -3,25 +3,25 @@ fs            = require 'fs'
 {spawn, exec} = require 'child_process'
 
 javascripts =
-  'worker.js' : ['worker.coffee']
-  'p2pc.js'   : ['p2pc.coffee']
+  'bin/worker.js' : ['src/worker.coffee']
+  'bin/p2pc.js'   : ['src/p2pc.coffee']
 
 compile = (js, sourcefiles) ->
   print "#{js} : Compiling...\n"
 
-  options = ['--compile'
-             '--output', 'bin'
-             '--join', js]
-  options = options.concat(sourcefiles.map (file) -> 'src/' + file)
+  arguments = [
+    '--compile'
+    '--join', js
+  ].concat sourcefiles
 
-  coffee = spawn 'coffee', options
+  coffee = spawn 'coffee', arguments
   coffee.stdout.on 'data', (data) -> print "#{js} : " + data.toString()
   coffee.stderr.on 'data', (data) -> print "#{js} : " + data.toString()
   coffee.on 'exit', (status) -> callback?() if status is 0
 
 watch = (js, sourcefiles) ->
-  sourcefiles.map (sourcefile) ->
-    fs.watchFile 'src/' + sourcefile, -> compile js, sourcefiles
+  for sourcefile in sourcefiles
+    fs.watchFile sourcefile, -> compile js, sourcefiles
 
 task 'build', 'Compile CoffeeScript source files', ->
   for js of javascripts
