@@ -3,43 +3,50 @@ fs            = require 'fs'
 {spawn, exec} = require 'child_process'
 
 
-javascript_files = {}
+source_files = []
 
 # Server files
-javascript_files['server/bin/p2pc_server.js'] = [
-  'server/src/proxy.coffee'
-  'server/src/dispatcher.coffee'
-]
+source_files.push
+  name   : 'Server files'
+  prefix : 'server/'
+  js     : 'bin/p2pc_server.js'
+  coffee : ['src/proxy.coffee', 'src/dispatcher.coffee']
 
 # Client files
-javascript_files['client/lib/p2pc.js'] = [
-  'client/src/main.coffee'
-  'client/src/worker.coffee'
-]
+source_files.push
+  name   : 'Client files'
+  prefix : 'client/'
+  js     : 'lib/p2pc.js'
+  coffee : ['src/main.coffee', 'src/worker.coffee']
 
+source_files = source_files.map (batch) ->
+  name   : batch.name
+  prefix : undefined
+  js     : batch.prefix + batch.js if batch.js?
+  coffee : batch.coffee.map (filename) -> batch.prefix + filename
 
-compile = (js, sourcefiles) ->
-  print "#{js} : Compiling...\n"
+compile = (batch) ->
+  print "#{batch.name} : Compiling...\n"
 
-  arguments = [
-    '--compile'
-    '--join', js
-  ].concat sourcefiles
+  arguments = ['--compile']
+  .concat(if batch.js? then ['--join', batch.js] else [])
+  .concat(if batch.js? and batch.js.match('.js') then [] else '--bare')
+  .concat(batch.coffee)
 
   coffee = spawn 'coffee', arguments
-  coffee.stdout.on 'data', (data) -> print "#{js} : " + data.toString()
-  coffee.stderr.on 'data', (data) -> print "#{js} : " + data.toString()
+  coffee.stdout.on 'data', (data) -> print "#{batch.name} : " + data.toString()
+  coffee.stderr.on 'data', (data) -> print "#{batch.name} : " + data.toString()
   coffee.on 'exit', (status) -> callback?() if status is 0
 
-watch = (js, sourcefiles) ->
-  for sourcefile in sourcefiles
-    fs.watchFile sourcefile, -> compile js, sourcefiles
+watch = (batch) ->
+  for sourcefile in batch.coffee
+    fs.watchFile sourcefile, -> compile sourcefiles, js
 
 task 'build', 'Compile CoffeeScript source files', ->
-  for js of javascript_files
-    compile js, javascript_files[js]
+  for batch in source_files
+    compile batch
 
 task 'watch', 'Recompile CoffeeScript source files when modified', ->
-  for js of javascript_files
-    compile js, javascript_files[js]
-    watch js, javascript_files[js]
+  for batch in source_files
+    compile batch
+    watch batch
