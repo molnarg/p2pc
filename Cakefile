@@ -2,14 +2,13 @@ fs            = require 'fs'
 {print}       = require 'sys'
 {spawn, exec} = require 'child_process'
 
-
 source_files = []
 
 # Server files
 source_files.push
   name   : 'Server files'
   prefix : 'server/'
-  js     : 'bin/p2pc_server.js'
+  js     : undefined
   coffee : ['src/proxy.coffee', 'src/dispatcher.coffee']
 
 # Client files
@@ -40,7 +39,7 @@ compile = (batch) ->
 
 watch = (batch) ->
   for sourcefile in batch.coffee
-    fs.watchFile sourcefile, -> compile sourcefiles, js
+    fs.watchFile sourcefile, -> compile batch
 
 task 'build', 'Compile CoffeeScript source files', ->
   for batch in source_files
