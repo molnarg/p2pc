@@ -4,13 +4,17 @@ proxy = require 'http-proxy'
 # See https://github.com/nodejitsu/node-http-proxy/
 #     blob/master/examples/middleware/modifyResponse-middleware.js
 middleware = (req, res, next) ->
-  if req.url is '/'
-    original_write = res.write
+  original_write = res.write
 
-    res.write = (data) ->
-      scripttag = '<script>alert(42);</script>'
-      towrite = data.toString().replace '</head>', scripttag + '</head>'
-      original_write.call res, towrite
+  new_write = (data) ->
+    scripttag = '<script>alert(42);</script>\n'
+    towrite = data.toString().replace '</head>', scripttag + '</head>'
+    original_write.call res, towrite
+
+  res.write = (data) ->
+    its_html = res._header.match /Content-Type: text\/html/i
+    res.write = (if its_html then new_write else original_write)
+    res.write data
 
   next()
 
