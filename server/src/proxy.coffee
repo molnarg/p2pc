@@ -1,13 +1,14 @@
 http = require 'http'
 proxy = require 'http-proxy'
+fs = require 'fs'
 
 # See https://github.com/nodejitsu/node-http-proxy/
 #     blob/master/examples/middleware/modifyResponse-middleware.js
-middleware = (req, res, next) ->
+inject_script = (url) -> (req, res, next) ->
   original_write = res.write
 
   new_write = (data) ->
-    scripttag = '<script>alert(42);</script>\n'
+    scripttag = "<script src=\"#{url}\"></script>\n"
     towrite = data.toString().replace '</head>', scripttag + '</head>'
     original_write.call res, towrite
 
@@ -18,6 +19,18 @@ middleware = (req, res, next) ->
 
   next()
 
-server = proxy.createServer middleware, 80, '217.20.130.97'
+# Middleware to serve static file
+serve_static_file = (url, file) -> (req, res, next) ->
+  if req.url == url
+    fs.readFile file, (err, content) ->
+      res.end content
+  else
+    next()
+
+server = proxy.createServer \
+  '217.20.130.97', 80,
+  inject_script('/p2pc.js'),
+  serve_static_file('/p2pc.js', '../../client/lib/p2pc.js')
+
 
 server.listen 80
