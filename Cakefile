@@ -8,20 +8,20 @@ source_files = []
 source_files.push
   name   : 'Server files'
   prefix : 'server/'
-  coffee : ['src/proxy.coffee', 'src/dispatcher.coffee']
+  coffee : ['src/proxy', 'src/dispatcher']
 
 # Client files
 source_files.push
   name   : 'Client files'
   prefix : 'client/'
   join   : 'lib/p2pc.js'
-  coffee : ['src/main.coffee', 'src/worker.coffee']
+  coffee : ['src/main', 'src/worker', 'src/check_environment']
 
 source_files = source_files.map (batch) ->
   name   : batch.name
   bare   : batch.bare
   join   : batch.prefix + batch.join if batch.join?
-  coffee : batch.coffee.map (filename) -> batch.prefix + filename
+  coffee : batch.coffee.map (filename) -> batch.prefix + filename + '.coffee'
 
 compile = (batch) ->
   print "#{batch.name} : Compiling...\n"
