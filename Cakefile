@@ -27,13 +27,13 @@ compile = (batch) ->
   print "#{batch.name} : Compiling...\n"
 
   arguments = ['--compile']
-  .concat(['--join', batch.join] if batch.join?)
-  .concat(['--bare'] if batch.bare?)
+  .concat(if batch.join? then ['--join', batch.join] else [])
+  .concat(if batch.bare? then ['--bare'] else [])
   .concat(batch.coffee)
 
   coffee = spawn 'coffee', arguments
-  coffee.stdout.on 'data', (data) -> print "#{batch.name} : " + data.toString()
-  coffee.stderr.on 'data', (data) -> print "#{batch.name} : " + data.toString()
+  coffee.stdout.on 'data', (data) -> print data.toString()
+  coffee.stderr.on 'data', (data) -> print data.toString()
   coffee.on 'exit', (status) -> callback?() if status is 0
 
 watch = (batch) ->
