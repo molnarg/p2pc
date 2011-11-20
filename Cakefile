@@ -28,8 +28,8 @@ compile = (batch) ->
   print "#{batch.name} : Compiling...\n"
 
   arguments = ['--compile']
-  .concat(if batch.js? then ['--join', batch.js] else [])
-  .concat(if batch.js? and batch.js.match('.js') then [] else '--bare')
+  .concat(['--join', batch.js] if batch.js?)
+  .concat(['--bare'] if batch.bare?)
   .concat(batch.coffee)
 
   coffee = spawn 'coffee', arguments
