@@ -1,7 +1,7 @@
 main = ->
   console.log 'main'
 
-  worker = new Worker "/p2pc.js"
+  worker = new SharedWorker "/p2pc.js"
 
   worker.onerror = (e) ->
     throw new Error(e.message + " (" + e.filename + ":" + e.lineno + ")")

@@ -1,11 +1,9 @@
 worker = ->
-  console.log 'worker'
-
   portlist = []
 
   setInterval ( ->
     for port in portlist
-      port.postMessage "#connections = " + list.length
+      port.postMessage "#connections = " + portlist.length
   ), 1000
 
   self.onconnect = (event) ->

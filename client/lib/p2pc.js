@@ -4,7 +4,7 @@
   main = function() {
     var worker;
     console.log('main');
-    worker = new Worker("/p2pc.js");
+    worker = new SharedWorker("/p2pc.js");
     worker.onerror = function(e) {
       throw new Error(e.message + " (" + e.filename + ":" + e.lineno + ")");
     };
@@ -16,14 +16,13 @@
 
   worker = function() {
     var portlist;
-    console.log('worker');
     portlist = [];
     setInterval((function() {
       var port, _i, _len, _results;
       _results = [];
       for (_i = 0, _len = portlist.length; _i < _len; _i++) {
         port = portlist[_i];
-        _results.push(port.postMessage("#connections = " + list.length));
+        _results.push(port.postMessage("#connections = " + portlist.length));
       }
       return _results;
     }), 1000);
