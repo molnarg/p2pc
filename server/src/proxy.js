@@ -1,5 +1,5 @@
 (function() {
-  var fs, http, inject_script, logger, modify_html, proxy, rewrite_virtual_host, serve_static_file, server;
+  var fs, http, inject_script, logger, modify_html, proxy, remove_index_redirects, repair_self_references, rewrite_virtual_host, serve_static_file, server;
 
   http = require('http');
 
@@ -13,23 +13,52 @@
     };
   };
 
+  remove_index_redirects = function(html) {
+    var encoded_link, encoded_links, match, x_redirect, _i, _len;
+    x_redirect = new RegExp('"(http://index.hu)?/x[^"]*=', 'g');
+    html = html.replace(x_redirect, '"');
+    encoded_link = new RegExp('"[^"]*%2F[^"]*"', 'g');
+    encoded_links = html.match(encoded_link);
+    if (encoded_links != null) {
+      for (_i = 0, _len = encoded_links.length; _i < _len; _i++) {
+        match = encoded_links[_i];
+        html = html.replace(match, decodeURIComponent(match));
+      }
+    }
+    return html;
+  };
+
+  repair_self_references = function(url) {
+    return function(html) {
+      var references;
+      references = new RegExp('="[^"]*' + url, 'g');
+      return html.replace(references, '="/');
+    };
+  };
+
   modify_html = function(rewriters) {
     return function(req, res, next) {
-      var new_write, original_write;
+      var html, new_end, new_write, original_end, original_write;
       original_write = res.write;
+      original_end = res.end;
+      html = '';
       new_write = function(data) {
+        return html += data.toString();
+      };
+      new_end = function() {
         var rewriter, _i, _len;
-        data = data.toString();
         for (_i = 0, _len = rewriters.length; _i < _len; _i++) {
           rewriter = rewriters[_i];
-          data = rewriter(data);
+          html = rewriter(html);
         }
-        return original_write.call(res, data);
+        original_write.call(res, html);
+        return original_end.call(res);
       };
       res.write = function(data) {
         var its_html;
         its_html = res._header.match(/Content-Type: text\/html/i);
         res.write = (its_html ? new_write : original_write);
+        if (its_html) res.end = new_end;
         return res.write(data);
       };
       return next();
@@ -64,7 +93,7 @@
     };
   };
 
-  server = proxy.createServer('217.20.130.97', 80, logger(), modify_html([inject_script('/p2pc.js')]), serve_static_file('/p2pc.js', 'client/lib/p2pc.js'), rewrite_virtual_host('index.hu'));
+  server = proxy.createServer('217.20.130.97', 80, logger(), modify_html([inject_script('/p2pc.js'), remove_index_redirects, repair_self_references('http://index.hu/')]), serve_static_file('/p2pc.js', 'client/lib/p2pc.js'), rewrite_virtual_host('index.hu'));
 
   server.listen(8080);
 
