@@ -9,6 +9,7 @@ source_files.push
   name   : 'Server files'
   prefix : 'server/'
   coffee : ['src/proxy', 'src/dispatcher']
+  run    : 'bin/p2pc_server'
 
 # Client files
 source_files.push
@@ -22,8 +23,9 @@ source_files = source_files.map (batch) ->
   bare   : batch.bare
   join   : batch.prefix + batch.join if batch.join?
   coffee : batch.coffee.map (filename) -> batch.prefix + filename + '.coffee'
+  run    : batch.prefix + batch.run if batch.run?
 
-compile = (batch) ->
+compile = (batch, callback) ->
   print "#{batch.name} : Compiling...\n"
 
   arguments = ['--compile']
@@ -34,11 +36,30 @@ compile = (batch) ->
   coffee = spawn 'coffee', arguments
   coffee.stdout.on 'data', (data) -> print data.toString()
   coffee.stderr.on 'data', (data) -> print data.toString()
-  coffee.on 'exit', (status) -> callback?() if status is 0
+  coffee.on 'exit', (status) -> callback?(batch) if status is 0
 
-watch = (batch) ->
+watch = (batch, callback) ->
+  onFileChange = (file, callback) ->
+    fs.watchFile file, (curr, prev) ->
+      if curr.mtime.getTime() != prev.mtime.getTime()
+        callback()
+
   for sourcefile in batch.coffee
-    fs.watchFile sourcefile, -> compile batch
+    onFileChange sourcefile, -> compile(batch, callback)
+
+run = (batch) ->
+  return if not batch.run?
+
+  console.log "#{batch.name} : Running #{batch.run}"
+
+  # Kill running instance first if any
+  if batch.process?
+    batch.process.kill()
+
+  # Run a new instance
+  batch.process = spawn batch.run
+  batch.process.stdout.on 'data', (data) -> print data.toString()
+  batch.process.stderr.on 'data', (data) -> print data.toString()
 
 task 'build', 'Compile CoffeeScript source files', ->
   for batch in source_files
@@ -48,3 +69,9 @@ task 'watch', 'Recompile CoffeeScript source files when modified', ->
   for batch in source_files
     compile batch
     watch batch
+
+task 'watch_and_run', 'Recompile CoffeeScript source files when modified, and run batches which have an executable specified.', ->
+  for batch in source_files
+    compile batch
+    run batch
+    watch batch, run
