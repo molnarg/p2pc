@@ -68,16 +68,23 @@ logger = ->
 
     next()
 
+# Remove referer from proxied requests
+remove_referer = (req, res, next) ->
+  delete req.headers.referer
+
+  next()
+
 server = proxy.createServer \
   '217.20.130.97', 80,
   logger(),
+  serve_static_file('/p2pc.js', 'client/lib/p2pc.js'),
+  rewrite_virtual_host('index.hu'),
+  remove_referer,
   modify_html([
     inject_script('/p2pc.js'),
     remove_index_redirects,
     repair_self_references('http://index.hu/')
-  ]),
-  serve_static_file('/p2pc.js', 'client/lib/p2pc.js'),
-  rewrite_virtual_host('index.hu')
+  ])
 
 
 server.listen 8080
