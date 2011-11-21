@@ -27,10 +27,17 @@ serve_static_file = (url, file) -> (req, res, next) ->
   else
     next()
 
+#Middleware to rewrite host url (to be able to run the proxy on arbitrary address)
+rewrite_virtual_host = (new_vh) -> (req, res, next) ->
+  req.headers.host = new_vh
+
+  next()
+
 server = proxy.createServer \
   '217.20.130.97', 80,
   inject_script('/p2pc.js'),
-  serve_static_file('/p2pc.js', '../../client/lib/p2pc.js')
+  serve_static_file('/p2pc.js', '../../client/lib/p2pc.js'),
+  rewrite_virtual_host('index.hu')
 
 
-server.listen 80
+server.listen 8080
