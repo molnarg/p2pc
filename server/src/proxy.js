@@ -105,7 +105,7 @@
     };
   };
 
-  server = proxy.createServer('217.20.130.97', 80, logger(), serve_static_file('/p2pc.js', 'client/lib/p2pc.js'), modify_headers({
+  server = proxy.createServer('217.20.130.97', 80, logger(), serve_static_file('/p2pc.js', 'client/lib/p2pc.js'), serve_static_file('/p2pc.html', 'client/test/p2pc.html'), modify_headers({
     host: 'index.hu',
     referer: void 0,
     cookie: void 0
