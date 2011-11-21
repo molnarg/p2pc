@@ -20,6 +20,9 @@ repair_self_references = (url) -> (html) ->
   references = new RegExp('="[^"]*' + url, 'g')
   html.replace(references, '="/')
 
+suppress_referer_for_links = (html) ->
+  html.replace(/<a /g,      '<a rel="noreferer" ')
+
 # See https://github.com/nodejitsu/node-http-proxy/
 #     blob/master/examples/middleware/modifyResponse-middleware.js
 modify_html = (rewriters) -> (req, res, next) ->
@@ -70,6 +73,7 @@ logger = ->
 
 # Remove referer from proxied requests
 remove_referer = (req, res, next) ->
+  console.log req.headers.referer
   delete req.headers.referer
 
   next()
@@ -81,9 +85,10 @@ server = proxy.createServer \
   rewrite_virtual_host('index.hu'),
   remove_referer,
   modify_html([
-    inject_script('/p2pc.js'),
-    remove_index_redirects,
+    inject_script('/p2pc.js')
+    remove_index_redirects
     repair_self_references('http://index.hu/')
+    suppress_referer_for_links
   ])
 
 

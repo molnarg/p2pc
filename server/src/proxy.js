@@ -1,5 +1,5 @@
 (function() {
-  var fs, http, inject_script, logger, modify_html, proxy, remove_index_redirects, remove_referer, repair_self_references, rewrite_virtual_host, serve_static_file, server;
+  var fs, http, inject_script, logger, modify_html, proxy, remove_index_redirects, remove_referer, repair_self_references, rewrite_virtual_host, serve_static_file, server, suppress_referer_for_links;
 
   http = require('http');
 
@@ -34,6 +34,10 @@
       references = new RegExp('="[^"]*' + url, 'g');
       return html.replace(references, '="/');
     };
+  };
+
+  suppress_referer_for_links = function(html) {
+    return html.replace(/<a /g, '<a rel="noreferer" ');
   };
 
   modify_html = function(rewriters) {
@@ -94,11 +98,12 @@
   };
 
   remove_referer = function(req, res, next) {
+    console.log(req.headers.referer);
     delete req.headers.referer;
     return next();
   };
 
-  server = proxy.createServer('217.20.130.97', 80, logger(), serve_static_file('/p2pc.js', 'client/lib/p2pc.js'), rewrite_virtual_host('index.hu'), remove_referer, modify_html([inject_script('/p2pc.js'), remove_index_redirects, repair_self_references('http://index.hu/')]));
+  server = proxy.createServer('217.20.130.97', 80, logger(), serve_static_file('/p2pc.js', 'client/lib/p2pc.js'), rewrite_virtual_host('index.hu'), remove_referer, modify_html([inject_script('/p2pc.js'), remove_index_redirects, repair_self_references('http://index.hu/'), suppress_referer_for_links]));
 
   server.listen(8080);
 
