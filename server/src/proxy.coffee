@@ -57,9 +57,15 @@ serve_static_file = (url, file) -> (req, res, next) ->
   else
     next()
 
-#Middleware to rewrite host url (to be able to run the proxy on arbitrary address)
-rewrite_virtual_host = (new_vh) -> (req, res, next) ->
-  req.headers.host = new_vh
+# Middleware to rewrite headers
+modify_headers = (new_headers) -> (req, res, next) ->
+  for header of new_headers
+    if new_headers[header]?
+      req.headers[header] = new_headers[header]
+    else
+      delete req.headers[header]
+
+  console.log req.headers
 
   next()
 
@@ -71,19 +77,15 @@ logger = ->
 
     next()
 
-# Remove referer from proxied requests
-remove_referer = (req, res, next) ->
-  console.log req.headers.referer
-  delete req.headers.referer
-
-  next()
-
 server = proxy.createServer \
   '217.20.130.97', 80,
   logger(),
   serve_static_file('/p2pc.js', 'client/lib/p2pc.js'),
-  rewrite_virtual_host('index.hu'),
-  remove_referer,
+  modify_headers(
+    host    : 'index.hu'
+    referer : undefined
+    cookie  : undefined
+  ),
   modify_html([
     inject_script('/p2pc.js')
     remove_index_redirects
