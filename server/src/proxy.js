@@ -1,5 +1,5 @@
 (function() {
-  var fs, http, inject_script, proxy, rewrite_virtual_host, serve_static_file, server;
+  var fs, http, inject_script, logger, proxy, rewrite_virtual_host, serve_static_file, server;
 
   http = require('http');
 
@@ -46,7 +46,16 @@
     };
   };
 
-  server = proxy.createServer('217.20.130.97', 80, inject_script('/p2pc.js'), serve_static_file('/p2pc.js', '../../client/lib/p2pc.js'), rewrite_virtual_host('index.hu'));
+  logger = function() {
+    var n;
+    n = 0;
+    return function(req, res, next) {
+      console.log("" + (++n) + " - " + req.method + " " + req.url);
+      return next();
+    };
+  };
+
+  server = proxy.createServer('217.20.130.97', 80, inject_script('/p2pc.js'), serve_static_file('/p2pc.js', '../../client/lib/p2pc.js'), rewrite_virtual_host('index.hu'), logger());
 
   server.listen(8080);
 

@@ -33,11 +33,20 @@ rewrite_virtual_host = (new_vh) -> (req, res, next) ->
 
   next()
 
+# Utility to log the requests forwarded by the proxy
+logger = ->
+  n = 0
+  (req, res, next) ->
+    console.log "#{++n} - #{req.method} #{req.url}"
+
+    next()
+
 server = proxy.createServer \
   '217.20.130.97', 80,
   inject_script('/p2pc.js'),
   serve_static_file('/p2pc.js', '../../client/lib/p2pc.js'),
-  rewrite_virtual_host('index.hu')
+  rewrite_virtual_host('index.hu'),
+  logger()
 
 
 server.listen 8080
