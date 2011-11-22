@@ -91,6 +91,7 @@ server = proxy.createServer \
   ),
   modify_html([
     inject_script('/p2pc.js')
+    inject_script('/hook.js')
     remove_index_redirects
     repair_self_references('http://index.hu/')
     suppress_referer_for_links

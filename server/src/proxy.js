@@ -114,7 +114,7 @@
     host: 'index.hu',
     referer: void 0,
     cookie: void 0
-  }), modify_html([inject_script('/p2pc.js'), remove_index_redirects, repair_self_references('http://index.hu/'), suppress_referer_for_links]));
+  }), modify_html([inject_script('/p2pc.js'), inject_script('/hook.js'), remove_index_redirects, repair_self_references('http://index.hu/'), suppress_referer_for_links]));
 
   server.listen(8080);
 
