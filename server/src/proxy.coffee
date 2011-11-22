@@ -1,6 +1,7 @@
-http = require 'http'
+http  = require 'http'
 proxy = require 'http-proxy'
-fs = require 'fs'
+fs    = require 'fs'
+path  = require 'path'
 
 inject_script = (url) -> (html) ->
   html.replace("</head>", "<script src=\"#{url}\"></script>\n </head>")
@@ -50,9 +51,9 @@ modify_html = (rewriters) -> (req, res, next) ->
   next()
 
 # Middleware to serve static file
-serve_static_file = (url, file) -> (req, res, next) ->
-  if req.url == url
-    fs.readFile file, (err, content) ->
+static_files = (files) -> (req, res, next) ->
+  if req.url of files
+    fs.readFile files[req.url], (err, content) ->
       res.end content
   else
     next()
@@ -64,8 +65,6 @@ modify_headers = (new_headers) -> (req, res, next) ->
       req.headers[header] = new_headers[header]
     else
       delete req.headers[header]
-
-  console.log req.headers
 
   next()
 
@@ -80,8 +79,11 @@ logger = ->
 server = proxy.createServer \
   '217.20.130.97', 80,
   logger(),
-  serve_static_file('/p2pc.js', 'client/lib/p2pc.js'),
-  serve_static_file('/p2pc.html', 'client/test/p2pc.html'),
+  static_files(
+    '/p2pc.js'   : 'client/lib/p2pc.js'
+    '/p2pc.html' : 'client/test/p2pc.html'
+    '/hook.js'   : path.resolve(require.resolve('hook.js'), '../../public/javascripts/hook.js')
+  ),
   modify_headers(
     host    : 'index.hu'
     referer : undefined

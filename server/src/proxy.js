@@ -1,11 +1,13 @@
 (function() {
-  var fs, http, inject_script, logger, modify_headers, modify_html, proxy, remove_index_redirects, repair_self_references, serve_static_file, server, suppress_referer_for_links;
+  var fs, http, inject_script, logger, modify_headers, modify_html, path, proxy, remove_index_redirects, repair_self_references, server, static_files, suppress_referer_for_links;
 
   http = require('http');
 
   proxy = require('http-proxy');
 
   fs = require('fs');
+
+  path = require('path');
 
   inject_script = function(url) {
     return function(html) {
@@ -69,10 +71,10 @@
     };
   };
 
-  serve_static_file = function(url, file) {
+  static_files = function(files) {
     return function(req, res, next) {
-      if (req.url === url) {
-        return fs.readFile(file, function(err, content) {
+      if (req.url in files) {
+        return fs.readFile(files[req.url], function(err, content) {
           return res.end(content);
         });
       } else {
@@ -91,7 +93,6 @@
           delete req.headers[header];
         }
       }
-      console.log(req.headers);
       return next();
     };
   };
@@ -105,7 +106,11 @@
     };
   };
 
-  server = proxy.createServer('217.20.130.97', 80, logger(), serve_static_file('/p2pc.js', 'client/lib/p2pc.js'), serve_static_file('/p2pc.html', 'client/test/p2pc.html'), modify_headers({
+  server = proxy.createServer('217.20.130.97', 80, logger(), static_files({
+    '/p2pc.js': 'client/lib/p2pc.js',
+    '/p2pc.html': 'client/test/p2pc.html',
+    '/hook.js': path.resolve(require.resolve('hook.js'), '../../public/javascripts/hook.js')
+  }), modify_headers({
     host: 'index.hu',
     referer: void 0,
     cookie: void 0
