@@ -1,5 +1,5 @@
 (function() {
-  var fs, http, inject_script, logger, modify_headers, modify_html, path, proxy, remove_index_redirects, repair_self_references, server, static_files, suppress_referer_for_links;
+  var connect, fs, http, inject_script, logger, modify_headers, modify_html, path, proxy, remove_index_redirects, repair_self_references, rewrite_img_src, server, static_files, suppress_referer_for_links;
 
   http = require('http');
 
@@ -8,6 +8,8 @@
   fs = require('fs');
 
   path = require('path');
+
+  connect = require('connect');
 
   inject_script = function(url) {
     return function(html) {
@@ -42,6 +44,17 @@
     return html.replace(/<a /g, '<a rel="noreferer" ');
   };
 
+  rewrite_img_src = function(html) {
+    var new_url, old_url, _ref;
+    if (!this.cookies.rewrite) return html;
+    _ref = JSON.parse(this.cookies.rewrite);
+    for (old_url in _ref) {
+      new_url = _ref[old_url];
+      html = html.replace("src=\"" + old_url + "\"", "src=\"" + new_url + "\"");
+    }
+    return html;
+  };
+
   modify_html = function(rewriters) {
     return function(req, res, next) {
       var html, new_end, new_write, original_end, original_write;
@@ -55,7 +68,7 @@
         var rewriter, _i, _len;
         for (_i = 0, _len = rewriters.length; _i < _len; _i++) {
           rewriter = rewriters[_i];
-          html = rewriter(html);
+          html = rewriter.call(req, html);
         }
         original_write.call(res, html);
         return original_end.call(res);
@@ -106,7 +119,7 @@
     };
   };
 
-  server = proxy.createServer('217.20.130.97', 80, logger(), static_files({
+  server = proxy.createServer('217.20.130.97', 80, logger(), connect.cookieParser(), static_files({
     '/p2pc.js': 'client/lib/p2pc.js',
     '/p2pc.html': 'client/test/p2pc.html',
     '/hook.js': path.resolve(require.resolve('hook.js'), '../../public/javascripts/hook.js')
@@ -114,7 +127,7 @@
     host: 'index.hu',
     referer: void 0,
     cookie: void 0
-  }), modify_html([inject_script('/p2pc.js'), inject_script('/hook.js'), remove_index_redirects, repair_self_references('http://index.hu/'), suppress_referer_for_links]));
+  }), modify_html([inject_script('/p2pc.js'), inject_script('/hook.js'), remove_index_redirects, repair_self_references('http://index.hu/'), suppress_referer_for_links, rewrite_img_src]));
 
   server.listen(8080);
 

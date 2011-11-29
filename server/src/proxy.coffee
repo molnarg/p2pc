@@ -1,7 +1,8 @@
-http  = require 'http'
-proxy = require 'http-proxy'
-fs    = require 'fs'
-path  = require 'path'
+http    = require 'http'
+proxy   = require 'http-proxy'
+fs      = require 'fs'
+path    = require 'path'
+connect = require 'connect'
 
 inject_script = (url) -> (html) ->
   html.replace("</head>", "<script src=\"#{url}\"></script>\n </head>")
@@ -24,6 +25,14 @@ repair_self_references = (url) -> (html) ->
 suppress_referer_for_links = (html) ->
   html.replace(/<a /g,      '<a rel="noreferer" ')
 
+rewrite_img_src = (html) ->
+  return html if not this.cookies.rewrite
+
+  for old_url, new_url of JSON.parse(this.cookies.rewrite)
+    html = html.replace("src=\"#{old_url}\"", "src=\"#{new_url}\"")
+
+  return html
+
 # See https://github.com/nodejitsu/node-http-proxy/
 #     blob/master/examples/middleware/modifyResponse-middleware.js
 modify_html = (rewriters) -> (req, res, next) ->
@@ -36,7 +45,7 @@ modify_html = (rewriters) -> (req, res, next) ->
 
   new_end = ->
     for rewriter in rewriters
-      html = rewriter html
+      html = rewriter.call req, html
 
     original_write.call res, html
     original_end.call res
@@ -79,6 +88,7 @@ logger = ->
 server = proxy.createServer \
   '217.20.130.97', 80,
   logger(),
+  connect.cookieParser(),
   static_files(
     '/p2pc.js'   : 'client/lib/p2pc.js'
     '/p2pc.html' : 'client/test/p2pc.html'
@@ -95,6 +105,7 @@ server = proxy.createServer \
     remove_index_redirects
     repair_self_references('http://index.hu/')
     suppress_referer_for_links
+    rewrite_img_src
   ])
 
 server.listen 8080
