@@ -16,7 +16,7 @@ source_files.push
   name   : 'Client files'
   prefix : 'client/'
   join   : 'lib/p2pc.js'
-  coffee : ['src/main', 'src/worker', 'src/check_environment']
+  coffee : ['src/main', 'src/worker', 'src/check_environment', 'src/filesystem']
 
 source_files = source_files.map (batch) ->
   name   : batch.name

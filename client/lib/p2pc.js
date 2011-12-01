@@ -1,5 +1,5 @@
 (function() {
-  var hookjs_test, main, worker;
+  var FileSystem, hookjs_test, main, worker;
 
   main = function() {
     var worker;
@@ -47,10 +47,10 @@
       return messages.appendChild(document.createElement('br'));
     });
     submitMessage = function(message) {
-      return hook.emit(name + '::message', {
+      return hook.emit(name + '::message', message({
         from: name,
         content: message
-      });
+      }));
     };
     checkSubmit = function(e) {
       if (e.keyCode === 13) {
@@ -83,5 +83,80 @@
   } else {
     main();
   }
+
+  FileSystem = (function() {
+    var logError, _ref, _ref2;
+
+    window.requestFileSystem = (_ref = window.requestFileSystem) != null ? _ref : window.webkitRequestFileSystem;
+
+    window.BlobBuilder = (_ref2 = window.BlobBuilder) != null ? _ref2 : window.WebKitBlobBuilder;
+
+    logError = function(e) {
+      return console.log('error', e);
+    };
+
+    function FileSystem(size, temporary) {
+      var _this = this;
+      this.size = size;
+      this.temporary = temporary != null ? temporary : true;
+      this.ready = false;
+      window.requestFileSystem(this.temporary ? window.TEMPORARY : window.PERSISTENT, this.size, function(fs) {
+        _this.fs = fs;
+        return _this.ready = true;
+      }, function(e) {
+        return console.log(e);
+      });
+    }
+
+    FileSystem.prototype.store = function(filename, data, callback) {
+      var onready;
+      onready = function(fileEntry) {
+        return fileEntry.createWriter(function(writer) {
+          var bb;
+          writer.onerror = logError;
+          writer.onwriteend = function(e) {
+            return callback(fileEntry.toURL());
+          };
+          bb = new BlobBuilder();
+          bb.append(data);
+          return writer.write(bb.getBlob('text/plain'));
+        });
+      };
+      return this.fs.root.getFile(filename, {
+        create: true,
+        exclusive: true
+      }, onready, logError);
+    };
+
+    FileSystem.prototype.read = function(filename, callback) {
+      var onready;
+      onready = function(fileEntry) {
+        return fileEntry.file(function(file) {
+          var reader;
+          reader = new FileReader();
+          reader.onloadend = function(e) {
+            return callback(reader.result);
+          };
+          return reader.readAsText(file);
+        });
+      };
+      return this.fs.root.getFile(filename, {}, onready, logError);
+    };
+
+    FileSystem.prototype["delete"] = function(filename, callback) {
+      var onready;
+      onready = function(fileEntry) {
+        return fileEntry.remove(callback, logError);
+      };
+      return this.fs.root.getFile(filename, {
+        create: false
+      }, onready, logError);
+    };
+
+    return FileSystem;
+
+  })();
+
+  window.FileSystem = FileSystem;
 
 }).call(this);
