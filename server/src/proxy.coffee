@@ -1,8 +1,12 @@
-http    = require 'http'
-proxy   = require 'http-proxy'
-fs      = require 'fs'
-path    = require 'path'
-connect = require 'connect'
+http       = require 'http'
+http_proxy = require 'http-proxy'
+fs         = require 'fs'
+path       = require 'path'
+connect    = require 'connect'
+
+hook_rest  = require 'hook.rest'
+{Hook}     = require 'hook.io'
+
 
 inject_script = (url) -> (html) ->
   html.replace("</head>", "<script src=\"#{url}\"></script>\n </head>")
@@ -85,27 +89,38 @@ logger = ->
 
     next()
 
-server = proxy.createServer \
-  '217.20.130.97', 80,
-  logger(),
-  connect.cookieParser(),
-  static_files(
-    '/p2pc.js'   : 'client/lib/p2pc.js'
-    '/p2pc.html' : 'client/test/p2pc.html'
-    '/hook.js'   : path.resolve(require.resolve('hook.js'), '../../public/javascripts/hook.js')
-  ),
-  modify_headers(
-    host    : 'index.hu'
-    referer : undefined
-    cookie  : undefined
-  ),
-  modify_html([
-    inject_script('/p2pc.js')
-    inject_script('/hook.js')
-    remove_index_redirects
-    repair_self_references('http://index.hu/')
-    suppress_referer_for_links
-    rewrite_img_src
-  ])
+
+proxy = new http_proxy.RoutingProxy()
+
+portal =
+  host : '217.20.130.97'
+  port : 80
+
+server = connect.createServer()
+server.use logger()
+server.use connect.cookieParser()
+
+hook = new Hook({name : 'rest', debug : true})
+server.use '/transfer', hook_rest(hook)
+
+server.use static_files
+  '/p2pc.js'   : 'client/lib/p2pc.js'
+  '/p2pc.html' : 'client/test/p2pc.html'
+
+server.use modify_headers
+  host    : 'index.hu'
+  referer : undefined
+  cookie  : undefined
+
+server.use modify_html [
+  inject_script('/p2pc.js')
+  inject_script('/transfer/client.js')
+  remove_index_redirects
+  repair_self_references('http://index.hu/')
+  suppress_referer_for_links
+  rewrite_img_src
+]
+
+server.use (req, res) -> proxy.proxyRequest(req, res, portal)
 
 server.listen 8080

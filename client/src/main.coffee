@@ -56,9 +56,7 @@ hookjs_test = ->
   '''
   chat.appendChild input
 
-  Hook = window.require('/hook.js').Hook
   window.hook = new Hook()
-  window.hook.connect()
 
   name = 'browser-' + Math.floor(Math.random()*100)
   setTimeout (-> hook.emit name + '::name', name), 500

@@ -1,15 +1,19 @@
 (function() {
-  var connect, fs, http, inject_script, logger, modify_headers, modify_html, path, proxy, remove_index_redirects, repair_self_references, rewrite_img_src, server, static_files, suppress_referer_for_links;
+  var Hook, connect, fs, hook, hook_rest, http, http_proxy, inject_script, logger, modify_headers, modify_html, path, portal, proxy, remove_index_redirects, repair_self_references, rewrite_img_src, server, static_files, suppress_referer_for_links;
 
   http = require('http');
 
-  proxy = require('http-proxy');
+  http_proxy = require('http-proxy');
 
   fs = require('fs');
 
   path = require('path');
 
   connect = require('connect');
+
+  hook_rest = require('hook.rest');
+
+  Hook = require('hook.io').Hook;
 
   inject_script = function(url) {
     return function(html) {
@@ -119,15 +123,42 @@
     };
   };
 
-  server = proxy.createServer('217.20.130.97', 80, logger(), connect.cookieParser(), static_files({
+  proxy = new http_proxy.RoutingProxy();
+
+  portal = {
+    host: '217.20.130.97',
+    port: 80
+  };
+
+  server = connect.createServer();
+
+  server.use(logger());
+
+  server.use(connect.cookieParser());
+
+  hook = new Hook({
+    name: 'rest',
+    debug: true
+  });
+
+  server.use('/transfer', hook_rest(hook));
+
+  server.use(static_files({
     '/p2pc.js': 'client/lib/p2pc.js',
-    '/p2pc.html': 'client/test/p2pc.html',
-    '/hook.js': path.resolve(require.resolve('hook.js'), '../../public/javascripts/hook.js')
-  }), modify_headers({
+    '/p2pc.html': 'client/test/p2pc.html'
+  }));
+
+  server.use(modify_headers({
     host: 'index.hu',
     referer: void 0,
     cookie: void 0
-  }), modify_html([inject_script('/p2pc.js'), inject_script('/hook.js'), remove_index_redirects, repair_self_references('http://index.hu/'), suppress_referer_for_links, rewrite_img_src]));
+  }));
+
+  server.use(modify_html([inject_script('/p2pc.js'), inject_script('/transfer/client.js'), remove_index_redirects, repair_self_references('http://index.hu/'), suppress_referer_for_links, rewrite_img_src]));
+
+  server.use(function(req, res) {
+    return proxy.proxyRequest(req, res, portal);
+  });
 
   server.listen(8080);
 
