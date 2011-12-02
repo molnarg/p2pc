@@ -17,36 +17,55 @@
   };
 
   hookjs_test = function() {
-    var chat, checkSubmit, input, messages, name, submitMessage;
+    var addMessage, chat, checkSubmit, input, messages, name, ownColor, random, submitMessage;
     chat = document.createElement('div');
-    chat.setAttribute('style', 'position: fixed;\nright: 2em;\ntop: 1em;\nbottom: 1em;\n\nwidth: 20em;\nmargin-bottom: 2em;\n\nbackground-color: rgba(0,0,0,0.1);\ncolor: black;');
-    document.body.appendChild(chat);
+    chat.setAttribute('style', 'position: absolute;\nleft: 0;\nright: 0;\ntop: -0.6em;\nbottom: 0.5em;\npadding: 1.2em;\n\nfont-family: Courier New;\n\nbackground-color: rgba(255,255,255,0.92);\n-webkit-box-shadow:rgba(0, 0, 0, 0.38) 0px 0px 32px -1px;\nborder-radius: 15px;\ncolor: black;');
+    $('content').makePositioned();
+    $('content').appendChild(chat);
+    $('ilogo').onclick = function() {
+      chat.toggle();
+      return false;
+    };
     messages = document.createElement('div');
-    messages.setAttribute('style', 'position: relative;\nheight: 100%;\n-bottom: 2em;\noverflow-y: scroll;');
+    messages.setAttribute('style', 'position: relative;\nfont-size: 21px;\nline-height: 28px;');
     chat.appendChild(messages);
     input = document.createElement('input');
-    input.setAttribute('style', 'font-size: 1.2em;\n\nposition: absolute;\nleft: 0;\nright: 0;\nbottom: -2em;\n\nheight: 1.5em;\nmargin: 0;\npadding: 0;\n\nbackground-color: rgba(255,255,255,0.2);');
+    input.setAttribute('style', 'font-size: 21px;\nfont-family: Courier New;\n\nwidth: 100%;\nheight: 1.5em;\nmargin: 0;\npadding: 0;\n\nbackground-color: rgba(255,255,255,0.2);');
     chat.appendChild(input);
     window.hook = new Hook();
     name = 'browser-' + Math.floor(Math.random() * 100);
+    random = function() {
+      if (Math.random() > 0.5) {
+        return Math.floor(128 * Math.random());
+      } else {
+        return 128 + Math.floor(128 * Math.random());
+      }
+    };
+    ownColor = {
+      r: random(),
+      g: random(),
+      b: random()
+    };
     setTimeout((function() {
-      return hook.emit(name + '::name', name);
+      return hook.emit(name + '::name', ownColor);
     }), 500);
-    window.hook.on('*::message', function(message) {
-      var node;
-      node = document.createTextNode("" + message.from + " - " + message.content);
-      messages.appendChild(node);
-      return messages.appendChild(document.createElement('br'));
+    addMessage = function(color, text) {
+      var b, g, message_node, r;
+      r = color.r, g = color.g, b = color.b;
+      message_node = document.createElement('div');
+      message_node.appendChild(document.createTextNode(text));
+      message_node.setAttribute('style', "color: rgba(" + r + ", " + g + ", " + b + ", 1);");
+      return messages.appendChild(message_node);
+    };
+    window.hook.on('*::message', function(m) {
+      return addMessage(m.from, m.content);
     });
-    window.hook.on('*::name', function(message) {
-      var message_node;
-      message_node = document.createTextNode(message + ' opened the page.');
-      messages.appendChild(message_node);
-      return messages.appendChild(document.createElement('br'));
+    window.hook.on('*::name', function(m) {
+      return addMessage(m, 'Új böngésző');
     });
     submitMessage = function(message) {
       return hook.emit(name + '::message', {
-        from: name,
+        from: ownColor,
         content: message
       });
     };
